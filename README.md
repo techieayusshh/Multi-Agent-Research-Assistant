@@ -132,9 +132,6 @@ The screenshots below show the current Inquiro interface, document RAG workflow,
 
 ![Inquiro verified citations and retrieved passages](./Result%20Output/Inquiro-Citations.png)
 
-| Existing interface | Existing paper Q&A |
-|---|---|
-| ![Inquiro interface](./Result%20Output/Interface.png) | ![Paper Q&A](./Result%20Output/Rag%20Agent.png) |
 
 ## Contributing
 
