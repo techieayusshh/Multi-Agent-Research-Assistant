@@ -1,5 +1,5 @@
 import os
-import re
+import logging
 
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -7,21 +7,23 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 
 
+logger = logging.getLogger(__name__)
+
+
 def create_vector_db(data_folder):
     documents = []
 
     # Load all PDFs
-    for file in os.listdir(data_folder):
+    for file in sorted(os.listdir(data_folder)):
 
         if file.endswith(".pdf"):
 
             pdf_path = os.path.join(data_folder, file)
 
-            print(f"Loading: {file}")
-
             loader = PyPDFLoader(pdf_path)
 
             pages = loader.load()
+            logger.info("Extracted %d pages from %s", len(pages), file)
 
             for page in pages:
 
@@ -38,7 +40,8 @@ def create_vector_db(data_folder):
 
                 documents.append(page)
 
-    print(f"\nLoaded {len(documents)} pages.")
+    if not documents:
+        raise ValueError("No extractable text was found in the uploaded PDF files.")
 
     # Split into chunks
     splitter = RecursiveCharacterTextSplitter(
@@ -48,13 +51,8 @@ def create_vector_db(data_folder):
 
     chunks = splitter.split_documents(documents)
 
-    print(f"Created {len(chunks)} chunks.")
-
-    # Debug (optional)
-    print("\nSample Chunks:")
-    for i, chunk in enumerate(chunks[:3]):
-        print(f"\n--- Chunk {i + 1} ---")
-        print(chunk.page_content[:300])
+    if not chunks:
+        raise ValueError("The uploaded PDF files did not contain usable text.")
 
     # Create embeddings
     embeddings = HuggingFaceEmbeddings(
@@ -69,8 +67,12 @@ def create_vector_db(data_folder):
 
     # Save locally
     vector_db.save_local("vectorstore")
-
-    print("\n✅ Vector database created successfully!")
+    logger.info(
+        "Created FAISS index: %d chunks, %d vectors, %d source documents",
+        len(chunks),
+        vector_db.index.ntotal,
+        len({chunk.metadata.get("source") for chunk in chunks}),
+    )
 
     return vector_db
 

@@ -1,4 +1,5 @@
 import os
+import logging
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -8,9 +9,13 @@ client = OpenAI(
     api_key=os.getenv("OPENROUTER_API_KEY"),
     base_url="https://openrouter.ai/api/v1"
 )
+logger = logging.getLogger(__name__)
 
 
 def answer_question(question, context):
+    if not context.strip():
+        raise ValueError("Cannot answer a document question without retrieved context.")
+
     try:
         response = client.chat.completions.create(
             model="meta-llama/llama-3.3-70b-instruct",
@@ -47,13 +52,19 @@ ANSWER:
             max_tokens=600,
         )
 
-        return response.choices[0].message.content.strip()
+        answer = response.choices[0].message.content.strip()
+        logger.info("Generated grounded answer for document question")
+        return answer
 
     except Exception as e:
+        logger.exception("Document question agent failed")
         return f"❌ API Error: {e}"
 
 
 def summarize_document(text):
+    if not text.strip():
+        raise ValueError("Cannot summarize an empty document.")
+
     try:
         response = client.chat.completions.create(
             model="meta-llama/llama-3.3-70b-instruct",
@@ -85,6 +96,7 @@ SUMMARY:
         return response.choices[0].message.content.strip()
 
     except Exception as e:
+        logger.exception("Summarization agent failed")
         return f"❌ API Error: {e}"
 
 
@@ -110,4 +122,5 @@ def general_answer(question):
         return response.choices[0].message.content.strip()
 
     except Exception as e:
+        logger.exception("General knowledge agent failed")
         return f"❌ API Error: {e}"
